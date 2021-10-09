@@ -11,21 +11,19 @@ import {
 } from "reactstrap";
 
 const data = [
-  { id: 1, email: "homero.simpson@gmail.com", phoneNumber: "12345667", address: "Av Simpre Viva 123", firstName: "Homero", lastName: "Simpson" },
-  { id: 2, email: "bart.simpson@gmail.com", phoneNumber: "12345667", address: "Av Simpre Viva 123", firstName: "Bart", lastName: "Simpson" },
-  { id: 3, email: "marge.simpson@gmail.com", phoneNumber: "12345667", address: "Av Simpre Viva 123", firstName: "Marge", lastName: "Simpson" },
-  { id: 4, email: "lisa.simpson@gmail.com", phoneNumber: "12345667", address: "Av Simpre Viva 123", firstName: "Lisa", lastName: "Simpson" },
-  { id: 5, email: "maggy.simpson@gmail.com", phoneNumber: "12345667", address: "Av Simpre Viva 123", firstName: "Maggy", lastName: "Simpson" }
 ];
+
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const PATH_CUSTOMERS = process.env.REACT_APP_API_CUSTOMERS_PATH;
 
 const User = () => {
 
   const [modalActualizar, setModalActualizar] = React.useState(false);
   const [modalInsertar, setModalInsertar] = React.useState(false);
+  const [newVal, setNewVal] = React.useState(0);
   const [usuario, setUsuario] = React.useState({
     data: data,
     form: {
-      id: "",
       email: "",
       phoneNumber: "",
       address: "",
@@ -48,9 +46,9 @@ const User = () => {
     let arregloUsuarios = usuario.data;
     let userToModify;
     arregloUsuarios.map((registro) => {
-      if (e.target.id == registro.id) {
+      if (e.target.id === registro._id) {
         userToModify = registro;
-        }
+      }
     });
     setUsuario({
       ...usuario,
@@ -72,51 +70,110 @@ const User = () => {
   };
 
   const editar = () => {
-    let contador = 0;
     let usuarioAModificar = { ...usuario.form };
-    let arregloUsuarios = usuario.data;
-    arregloUsuarios.map((registro) => {
-      if (usuarioAModificar.id === registro.id) {
-        arregloUsuarios[contador]= usuarioAModificar;
-      }
-      contador++;
-    });
-    setUsuario({
-      ...usuario,
-      data: arregloUsuarios
-    });
+    actualizarCustomer(usuarioAModificar);
     setModalActualizar(false);
   };
 
   const eliminar = (e) => {
-    let contador = 0;
     let arregloUsuarios = usuario.data;
     arregloUsuarios.map((registro) => {
-      if (e.target.id == registro.id) {
+      if (e.target.id === registro._id) {
         let opcion = window.confirm("¿Está seguro que desea eliminar el valor " + registro.firstName + "?");
         if (opcion) {
-          arregloUsuarios.splice(contador, 1);
+          borrarCustomer(registro._id);
         }
       }
-      contador++;
-    });
-    setUsuario({
-      ...usuario,
-      data: arregloUsuarios
     });
   };
 
+  React.useEffect(() => {
+    const requestOptions = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    };
+    fetch(`${BASE_URL}${PATH_CUSTOMERS}`, requestOptions)
+      .then(res => res.json())
+      .then(
+        (result) => {
+          //setIsLoaded(true);
+          setUsuario({
+            ...usuario,
+            data: result
+          });
+        },
+        (error) => {
+          //setIsLoaded(true);
+          //setErrors(error);
+        }
+      )
+  }, [newVal]);
+
+
   const insertar = () => {
     let usuarioACrear = { ...usuario.form };
-    usuarioACrear.id = usuario.data.length + 1;
-    let arregloUsuarios = usuario.data;
-    arregloUsuarios.push(usuarioACrear);
-    setUsuario({
-      ...usuario,
-      data: arregloUsuarios
-    });
+    const requestOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(usuarioACrear)
+    };
+    fetch(`${BASE_URL}${PATH_CUSTOMERS}`, requestOptions)
+      .then(
+        (response) => {
+          response.json();
+          setNewVal(newVal + 1);
+        },
+        (error) => {
+          //setIsLoaded(true);
+          //setErrors(error);
+        })
     setModalInsertar(false);
+  };
+
+
+  const borrarCustomer = (id) => {
+    const requestOptions = {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+    fetch(`${BASE_URL}${PATH_CUSTOMERS}/${id}`, requestOptions)
+      .then(result => result.json())
+      .then(
+        (result) => {
+          setNewVal(newVal + 1);
+        },
+        (error) => {
+          console.log(error);
+        }
+      );
   }
+
+  const actualizarCustomer = (customer) => {
+    const requestOptions = {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(customer)
+    };
+    fetch(`${BASE_URL}${PATH_CUSTOMERS}/${customer._id}`, requestOptions)
+      .then(result => result.json())
+      .then(
+        (result) => {
+          setNewVal(newVal + 1);
+        },
+        (error) => {
+          console.log(error);
+        }
+      );
+  }
+
 
   return (
     <>
@@ -139,7 +196,7 @@ const User = () => {
 
           <tbody>
             {usuario.data.map((dato) => (
-              <tr key={dato.id}>
+              <tr key={dato._id}>
                 <td>{dato.email}</td>
                 <td>{dato.firstName}</td>
                 <td>{dato.lastName}</td>
@@ -147,12 +204,12 @@ const User = () => {
                 <td>{dato.phoneNumber}</td>
                 <td>
                   <Button
-                    color="primary" id={dato.id}
+                    color="primary" id={dato._id}
                     onClick={mostrarModalActualizar}
                   >
                     Editar
                   </Button>{" "}
-                  <Button id={dato.id} color="danger" onClick={eliminar}>Eliminar</Button>
+                  <Button id={dato._id} color="danger" onClick={eliminar}>Eliminar</Button>
                 </td>
               </tr>
             ))}
@@ -162,22 +219,10 @@ const User = () => {
 
       <Modal isOpen={modalActualizar}>
         <ModalHeader>
-          <div><h3>Actualizar Usuario {usuario.form.id}</h3></div>
+          <div><h3>Actualizar Usuario {usuario.form._id}</h3></div>
         </ModalHeader>
 
         <ModalBody>
-          <FormGroup>
-            <label>
-              Id:
-            </label>
-
-            <input
-              className="form-control"
-              readOnly
-              type="text"
-              value={usuario.form.id}
-            />
-          </FormGroup>
 
           <FormGroup>
             <label>
@@ -267,20 +312,7 @@ const User = () => {
         <ModalHeader>
           <div><h3>Insertar Usuario</h3></div>
         </ModalHeader>
-
         <ModalBody>
-          <FormGroup>
-            <label>
-              Id:
-            </label>
-
-            <input
-              className="form-control"
-              readOnly
-              type="text"
-              value={usuario.data.length + 1}
-            />
-          </FormGroup>
           <FormGroup>
             <label>
               Email:
